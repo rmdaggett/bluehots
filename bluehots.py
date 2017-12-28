@@ -6,7 +6,8 @@ from firebase_admin import credentials, db
 from collections import defaultdict
 from time import sleep
 
-logger = logging.getLogger('bluehots')
+logging.basicConfig(level=logging.DEBUG)
+
 source = 'http://www.overstalk.io/heroes/?sources=BLIZZARD_FORUM&_sources=on&_sources=on&_sources=on&_sources=on'
 hook_url = 'https://discordapp.com/api/webhooks/395613235958513664/kp8uEeHVtFaPl2UrjxNopUNSAmmBsb4UWG4rkgmQ3VrZXCgGSQgxNn36TJKB--nBCrpC'
 firebase_url = 'https://bluehots-d71b6.firebaseio.com/'
@@ -146,3 +147,10 @@ class BlueHots(object):
             self.set_post_as_sent(key)
             sleep(1)
         return self.get_unsent_posts_from_server()
+
+if __name__ == "__main__":
+    logging.debug('BlueHots sync starting..')
+    app = BlueHots()
+    logging.debug('BlueHots initialized.')
+    app.emit_unsent_posts_to_webhook()
+    logging.debug('BlueHots sync complete.')
