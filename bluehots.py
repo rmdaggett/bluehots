@@ -110,9 +110,6 @@ class BlueHots(object):
             self.post_dict[slug]['date'] = ts
         return self.post_dict
 
-    def get_latest_post(self):
-        return self.populate_posts(self.get_posts()).iterkeys().next()
-
     def post_to_webhook(self, slug):
         post = self.get_post_from_server(slug)
         msg_string = (post['body'][:250] + '...') if len(post['body']) > 250 else post['body']
