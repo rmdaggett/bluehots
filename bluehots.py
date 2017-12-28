@@ -143,6 +143,7 @@ class BlueHots(object):
 
     def emit_unsent_posts_to_webhook(self):
         for key in self.get_unsent_posts_from_server():
+            logging.debug('Emitting post to webhook: %s', key)
             self.post_to_webhook(key)
             self.set_post_as_sent(key)
             sleep(1)
