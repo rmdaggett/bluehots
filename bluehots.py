@@ -4,10 +4,12 @@ from datetime import datetime
 from discord_hooks import Webhook
 from firebase_admin import credentials, db
 from collections import defaultdict
+from time import sleep
 
 logger = logging.getLogger('bluehots')
 source = 'http://www.overstalk.io/heroes/?sources=BLIZZARD_FORUM&_sources=on&_sources=on&_sources=on&_sources=on'
 hook_url = 'https://discordapp.com/api/webhooks/395613235958513664/kp8uEeHVtFaPl2UrjxNopUNSAmmBsb4UWG4rkgmQ3VrZXCgGSQgxNn36TJKB--nBCrpC'
+firebase_url = 'https://bluehots-d71b6.firebaseio.com/'
 
 class BlueHots(object):
 
@@ -25,7 +27,7 @@ class BlueHots(object):
     def init_firebase(self):
         creds = credentials.Certificate('creds.json')
         self.firebase_app = firebase_admin.initialize_app(creds, {
-            'databaseURL': 'https://bluehots-d71b6.firebaseio.com/'
+            'databaseURL': firebase_url
         })
         self.get_firebase_db()
         return self.firebase_app
@@ -111,11 +113,39 @@ class BlueHots(object):
     def get_latest_post(self):
         return self.populate_posts(self.get_posts()).iterkeys().next()
 
-    def post_to_webhook(self):
-        latest_post = self.get_latest_post()
-        msg_string = (latest_post['body'][:250] + '...') if len(latest_post['body']) > 250 else latest_post['body']
+    def post_to_webhook(self, slug):
+        post = self.get_post_from_server(slug)
+        msg_string = (post['body'][:250] + '...') if len(post['body']) > 250 else post['body']
         embed = Webhook(hook_url, color=123123)
-        embed.set_author(name=latest_post['title'], icon='https://cdn6.aptoide.com/imgs/5/1/f/51fc6f8666c50ce7456651810d7a4439_icon.png?w=240')
+        embed.set_author(name=post['title'], icon='https://cdn6.aptoide.com/imgs/5/1/f/51fc6f8666c50ce7456651810d7a4439_icon.png?w=240')
         embed.set_desc(msg_string)
-        embed.add_field(name='Read more', value=latest_post['url'])
+        embed.add_field(name='Read more', value=post['url'])
         embed.post()
+
+    def set_post_as_sent(self, slug):
+        return self.firebase_db.child('posts').child(slug).update({'sent': True})
+
+    def get_post_from_server(self, slug):
+        return self.firebase_db.child('posts').child(slug).get()
+
+    def get_posts_from_server(self):
+        return self.firebase_db.child('posts').get()
+
+    def get_unsent_posts_from_server(self):
+        unsent_posts = defaultdict(dict)
+        for key, value in self.get_posts_from_server().iteritems():
+            try:
+                sent = value['sent']
+                if not sent:
+                    unsent_posts[key] = value
+            except KeyError:
+                unsent_posts[key] = value
+                unsent_posts[key]['sent'] = False
+        return unsent_posts
+
+    def emit_unsent_posts_to_webhook(self):
+        for key in self.get_unsent_posts_from_server():
+            self.post_to_webhook(key)
+            self.set_post_as_sent(key)
+            sleep(1)
+        return self.get_unsent_posts_from_server()
