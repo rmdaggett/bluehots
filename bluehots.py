@@ -8,9 +8,10 @@ from time import sleep
 
 logging.basicConfig(level=logging.DEBUG)
 
-source = 'http://www.overstalk.io/heroes/?sources=BLIZZARD_FORUM&_sources=on&_sources=on&_sources=on&_sources=on'
-hook_url = 'https://discordapp.com/api/webhooks/395613235958513664/kp8uEeHVtFaPl2UrjxNopUNSAmmBsb4UWG4rkgmQ3VrZXCgGSQgxNn36TJKB--nBCrpC'
-firebase_url = 'https://bluehots-d71b6.firebaseio.com/'
+SOURCE = 'http://www.overstalk.io/heroes/?sources=BLIZZARD_FORUM&_sources=on&_sources=on&_sources=on&_sources=on'
+# TEST_HOOK_URL = 'https://discordapp.com/api/webhooks/395942721405059092/ywqzyE_SspBTlbSbDuiqRuj7Y1GhB5jZA-IrmBoEPWF2hTTBdNxaHBlUioCm-Lxn01U4'
+HOOK_URL = 'https://discordapp.com/api/webhooks/395613235958513664/kp8uEeHVtFaPl2UrjxNopUNSAmmBsb4UWG4rkgmQ3VrZXCgGSQgxNn36TJKB--nBCrpC'
+FIREBASE_URL = 'https://bluehots-d71b6.firebaseio.com/'
 
 class BlueHots(object):
 
@@ -22,13 +23,14 @@ class BlueHots(object):
     firebase_db = None
 
     def __init__(self):
-        self.run_setup(source)
+        self.crawl_data(SOURCE)
         self.init_firebase()
+        self.sync_posts()
 
     def init_firebase(self):
         creds = credentials.Certificate('creds.json')
         self.firebase_app = firebase_admin.initialize_app(creds, {
-            'databaseURL': firebase_url
+            'databaseURL': FIREBASE_URL
         })
         self.get_firebase_db()
         return self.firebase_app
@@ -38,11 +40,12 @@ class BlueHots(object):
         return self.firebase_db
 
     def sync_posts(self):
-        for key, value in self.post_dict.iteritems():
-            self.firebase_db.child('posts').child(key).set(value)
+        for slug in self.get_slugs_to_be_synced():
+            post = self.post_dict[slug]
+            self.firebase_db.child('posts').child(slug).set(post)
         return self.firebase_db
 
-    def run_setup(self, source):
+    def crawl_data(self, source):
         self.get_page(source)
         self.get_tree()
         self.get_posts()
@@ -114,7 +117,7 @@ class BlueHots(object):
     def post_to_webhook(self, slug):
         post = self.get_post_from_server(slug)
         msg_string = (post['body'][:250] + '...') if len(post['body']) > 250 else post['body']
-        embed = Webhook(hook_url, color=123123)
+        embed = Webhook(HOOK_URL, color=123123)
         embed.set_author(name=post['title'], icon='https://cdn6.aptoide.com/imgs/5/1/f/51fc6f8666c50ce7456651810d7a4439_icon.png?w=240')
         embed.set_desc(msg_string)
         embed.add_field(name='Read more', value=post['url'])
@@ -128,6 +131,28 @@ class BlueHots(object):
 
     def get_posts_from_server(self):
         return self.firebase_db.child('posts').get()
+
+    def get_server_slugs(self):
+        logging.debug('Fetching stored posts..')
+        slugs = []
+        for key in self.get_posts_from_server().iterkeys():
+            slugs.append(key)
+        return slugs
+
+    def get_local_slugs(self):
+        logging.debug('Getting local posts..')
+        slugs = []
+        for key in self.post_dict.iterkeys():
+            slugs.append(key)
+        return slugs
+
+    def get_slugs_to_be_synced(self):
+        server_slugs = self.get_server_slugs()
+        local_slugs = self.get_local_slugs()
+        slug_set = set(server_slugs)
+        result = [x for x in local_slugs if x not in slug_set]
+        logging.debug('Slugs to be synced: %s', result)
+        return result
 
     def get_unsent_posts_from_server(self):
         unsent_posts = defaultdict(dict)
@@ -152,6 +177,6 @@ class BlueHots(object):
 if __name__ == "__main__":
     logging.debug('BlueHots sync starting..')
     app = BlueHots()
-    logging.debug('BlueHots initialized.')
-    app.emit_unsent_posts_to_webhook()
     logging.debug('BlueHots sync complete.')
+    app.emit_unsent_posts_to_webhook()
+    logging.debug('BlueHots job complete.')
