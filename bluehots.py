@@ -10,9 +10,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 FORUM_SOURCE = 'http://www.overstalk.io/heroes/?sources=BLIZZARD_FORUM&_sources=on&_sources=on&_sources=on&_sources=on'
 BLOG_SOURCE = 'http://us.battle.net/heroes/en/blog/'
-# TEST_HOOK_URL = 'https://discordapp.com/api/webhooks/395942721405059092/ywqzyE_SspBTlbSbDuiqRuj7Y1GhB5jZA-IrmBoEPWF2hTTBdNxaHBlUioCm-Lxn01U4'
-HOOK_URL = 'https://discordapp.com/api/webhooks/395613235958513664/kp8uEeHVtFaPl2UrjxNopUNSAmmBsb4UWG4rkgmQ3VrZXCgGSQgxNn36TJKB--nBCrpC'
-FIREBASE_URL = 'https://bluehots-d71b6.firebaseio.com/'
+HOOK_URL = 'your discord webhook url'
+FIREBASE_URL = 'your firebase db url (e.g. https://abc123app.firebaseio.com/)'
 
 class BlueHots(object):
 
