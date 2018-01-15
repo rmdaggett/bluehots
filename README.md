@@ -4,7 +4,6 @@
 
 testing locally in python shell:
 ```
-> import bluehots
-> b = bluehots.BlueHots()
-> b.populate_posts()
+> from bluehots import BlueHots
+> b = BlueHots().populate_posts()
 ```
