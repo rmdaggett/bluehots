@@ -118,10 +118,15 @@ class BlueHots(object):
         ts = self.get_post_timestamp(post, post_type)
         title = self.get_post_title(post, post_type).lower()
         dt = None
+        slug = None
         if post_type == 'forum':
             dt = datetime.strptime(ts, '%d %B %Y %H:%M:%S')
         elif post_type == 'blog':
             dt = datetime.strptime(ts.strip(' PST'), '%b %d, %Y %I:%M %p')
+        if 1 < len(title.split()) < 4:
+            while len(title.split()) < 4:
+                now = datetime.now()
+                title = title + ' {}'.format(now.microsecond)
         slug = '{}-{}-{}-{}-{}{}{}'.format(title.split()[0],
                                            title.split()[1],
                                            title.split()[2],
